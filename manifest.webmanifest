@@ -1,0 +1,19 @@
+{
+  "name": "Mi Restaurante POS",
+  "short_name": "Restaurante POS",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#111827",
+  "orientation": "portrait",
+  "lang": "es",
+  "description": "Sistema POS para restaurante",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
