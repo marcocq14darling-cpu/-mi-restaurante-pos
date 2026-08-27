@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mi Restaurante POS</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f4f6f8;color:#17202a;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+header{background:#111827;color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center}
+h1,h2,h3{margin-top:0}.muted{color:#667085}.hidden{display:none!important}
+nav{display:flex;gap:8px;background:#fff;padding:10px;border-bottom:1px solid #ddd;overflow:auto}
+nav button,.btn{border:0;border-radius:9px;padding:10px 13px;cursor:pointer;background:#111827;color:#fff}
+nav button.active{background:#000}.btn.secondary{background:#e9edf2;color:#111827}.btn.danger{background:#b42318}
+main{max-width:1300px;margin:auto;padding:16px}.panel{background:#fff;border:1px solid #e1e5ea;border-radius:14px;padding:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:12px}.table{background:#fff;border:1px solid #ddd;border-radius:13px;padding:16px;min-height:110px;cursor:pointer}.table strong{font-size:22px}.table.open{border-color:#f79009}
+.layout{display:grid;grid-template-columns:1.35fr 1fr;gap:14px}.menu{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:9px}.item{border:1px solid #ddd;background:#fff;border-radius:11px;padding:13px;text-align:left;cursor:pointer}.item b{display:block}.price{color:#16803c;margin-top:5px}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:center;border-bottom:1px solid #eee;padding:9px 0}.actions{display:flex;gap:8px;flex-wrap:wrap}
+input,select{padding:11px;border:1px solid #d0d5dd;border-radius:9px;width:100%;font:inherit}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:#fff;border:1px solid #ddd;border-radius:13px;padding:15px}.big{font-size:25px;font-weight:700}
+.login{min-height:100vh;display:grid;place-items:center;background:#111827}.loginbox{width:min(390px,92vw);background:#fff;padding:24px;border-radius:18px}.loginbox input{margin:6px 0 12px}
+.toast{position:fixed;right:15px;bottom:15px;background:#111827;color:#fff;padding:12px 16px;border-radius:10px;display:none}
+@media(max-width:800px){.layout{grid-template-columns:1fr}.cards{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div id="login" class="login">
+ <div class="loginbox">
+  <h1>Mi Restaurante POS</h1><p class="muted">Acceso de administrador</p>
+  <label>Usuario</label><input id="user" autocomplete="username" value="Marco">
+  <label>Contraseña</label><input id="pass" type="password" autocomplete="current-password">
+  <button class="btn" style="width:100%;margin-top:6px" onclick="login()">Entrar</button>
+  <p id="loginError" style="color:#b42318"></p>
+ </div>
+</div>
+
+<div id="app" class="hidden">
+<header><div><h1>Mi Restaurante POS</h1><small id="role"></small></div><div id="clock"></div></header>
+<nav>
+<button class="active" data-v="mesas">Mesas</button><button data-v="cocina">Cocina</button><button data-v="caja">Caja</button><button data-v="reportes">Reportes</button><button data-v="inventario">Inventario</button><button data-v="usuarios">Usuarios</button>
+</nav>
+<main>
+<section id="mesas" class="view"><div class="actions" style="margin-bottom:12px"><button class="btn" onclick="newOrder()">+ Nueva orden</button><button class="btn secondary" onclick="logout()">Cerrar sesión</button></div><div id="tables" class="grid"></div><div id="editor"></div></section>
+
+<section id="cocina" class="view hidden"><div class="panel"><h2>Cocina</h2><div id="kitchen"></div></div></section>
+
+<section id="caja" class="view hidden"><div class="layout"><div class="panel"><h2>Control de caja</h2><div id="cash"></div></div><div class="panel"><h2>Registrar retiro</h2><input id="withdraw" type="number" step=".01" placeholder="Monto"><button class="btn" style="margin-top:8px" onclick="withdraw()">Registrar retiro</button><h3 style="margin-top:20px">Abrir caja</h3><input id="opening" type="number" step=".01" placeholder="Efectivo inicial"><button class="btn" style="margin-top:8px" onclick="openCash()">Abrir / reiniciar caja</button></div></div></section>
+
+<section id="reportes" class="view hidden"><div id="stats" class="cards"></div><div class="panel" style="margin-top:14px"><h2>Auditoría</h2><div id="audit"></div></div></section>
+
+<section id="inventario" class="view hidden"><div class="panel"><h2>Inventario</h2><div id="stock"></div><hr><h3>Agregar producto</h3><div class="layout"><input id="prodName" placeholder="Producto"><input id="prodQty" type="number" placeholder="Cantidad"><input id="prodUnit" placeholder="Unidad (kg, und, lt)"></div><button class="btn" style="margin-top:8px" onclick="addStock()">Agregar</button></div></section>
+
+<section id="usuarios" class="view hidden"><div class="panel"><h2>Usuarios y permisos</h2><p><b>Marco</b> — Administrador</p><p class="muted">La versión comercial deberá guardar las credenciales en un servidor con contraseñas cifradas. Esta versión es un prototipo local.</p></div></section>
+</main>
+</div><div id="toast" class="toast"></div>
+
+<script>
+const KEY="mrpos_v2";
+const menuDefault=[["Lomo saltado",18],["Arroz chaufa",16],["Pollo broaster",15],["Caldo de gallina",14],["Salchipapa",12],["Inca Kola",5]];
+let s=JSON.parse(localStorage.getItem(KEY)||"null")||{
+ menu:menuDefault.map((x,i)=>({id:i+1,name:x[0],price:x[1]})),
+ tables:Array.from({length:15},(_,i)=>({id:i+1,order:null})), orders:[], payments:[], withdrawals:[], audit:[],
+ stock:[], cash:{opened:false,opening:0}, nextOrder:1
+};
+let selected=null;
+function save(){localStorage.setItem(KEY,JSON.stringify(s));render()}
+function money(x){return "S/ "+Number(x||0).toFixed(2)}
+function total(o){return o.items.reduce((a,x)=>a+x.qty*x.price,0)}
+function audit(msg){s.audit.unshift(new Date().toLocaleString("es-PE")+" — "+msg);s.audit=s.audit.slice(0,150)}
+function toast(m){let t=document.getElementById("toast");t.textContent=m;t.style.display="block";setTimeout(()=>t.style.display="none",1800)}
+function login(){let u=document.getElementById("user").value.trim(),p=document.getElementById("pass").value; if(u==="Marco"&&p==="QUINTO2026"){document.getElementById("login").classList.add("hidden");document.getElementById("app").classList.remove("hidden");document.getElementById("role").textContent="Administrador · Marco";audit("Inicio de sesión: Marco");save()}else document.getElementById("loginError").textContent="Usuario o contraseña incorrectos."}
+function logout(){document.getElementById("app").classList.add("hidden");document.getElementById("login").classList.remove("hidden");document.getElementById("pass").value=""}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".view").forEach(x=>x.classList.add("hidden"));document.getElementById(b.dataset.v).classList.remove("hidden");render()});
+function renderTables(){let el=document.getElementById("tables");el.innerHTML=s.tables.map(t=>{let o=t.order;return `<div class="table ${o?'open':''}" onclick="openTable(${t.id})"><strong>Mesa ${t.id}</strong><div class="muted">${o?o.status+" · "+money(total(o)):"Libre"}</div></div>`}).join("")}
+function newOrder(){let t=s.tables.find(x=>!x.order);if(!t)return toast("No hay mesas libres");openTable(t.id)}
+function openTable(id){selected=id;let t=s.tables.find(x=>x.id===id);if(!t.order)t.order={id:"ORD-"+String(s.nextOrder++).padStart(4,"0"),table:id,employee:"Marco",status:"Pendiente",created:new Date().toISOString(),items:[]};renderEditor()}
+function renderEditor(){let t=s.tables.find(x=>x.id===selected);let el=document.getElementById("editor");if(!t){el.innerHTML="";return}el.innerHTML=`<div class="layout" style="margin-top:14px"><div class="panel"><h2>Mesa ${t.id}</h2><div class="menu">${s.menu.map(m=>`<button class="item" onclick="addItem(${m.id})"><b>${m.name}</b><span class="price">${money(m.price)}</span></button>`).join("")}</div></div><div class="panel"><h2>Orden ${t.order.id}</h2><div id="lines">${t.order.items.map((x,i)=>`<div class="row"><span>${x.qty}× ${x.name}</span><b>${money(x.qty*x.price)}</b><button class="btn secondary" onclick="minus(${i})">−</button></div>`).join("")||"<p class='muted'>Agrega productos.</p>"}</div><h3>Total: ${money(total(t.order))}</h3><div class="actions"><button class="btn" onclick="sendKitchen()">Enviar a cocina</button><button class="btn secondary" onclick="closeEditor()">Cerrar</button><button class="btn danger" onclick="voidOrder()">Anular</button></div></div></div>`}
+function addItem(id){let t=s.tables.find(x=>x.id===selected),m=s.menu.find(x=>x.id===id),x=t.order.items.find(y=>y.id===id);if(x)x.qty++;else t.order.items.push({id:m.id,name:m.name,price:m.price,qty:1});save();openTable(selected)}
+function minus(i){let t=s.tables.find(x=>x.id===selected);t.order.items[i].qty--;if(t.order.items[i].qty<=0)t.order.items.splice(i,1);save();openTable(selected)}
+function sendKitchen(){let t=s.tables.find(x=>x.id===selected);if(!t.order.items.length)return toast("La orden está vacía");t.order.status="En cocina";if(!s.orders.find(o=>o.id===t.order.id))s.orders.push(t.order);audit(`Orden ${t.order.id} enviada a cocina — Mesa ${selected}`);save();toast("Enviada a cocina")}
+function closeEditor(){selected=null;document.getElementById("editor").innerHTML="";renderTables()}
+function voidOrder(){let t=s.tables.find(x=>x.id===selected);if(!t.order||!confirm("¿Anular esta orden?"))return;audit(`ANULACIÓN ${t.order.id} — Mesa ${selected} — Administrador Marco`);s.orders=s.orders.filter(o=>o.id!==t.order.id);t.order=null;save();closeEditor()}
+function renderKitchen(){let el=document.getElementById("kitchen"),os=s.orders.filter(o=>!["Pagada","Anulada"].includes(o.status));el.innerHTML=os.length?os.map(o=>`<div class="panel" style="margin:9px 0"><div class="row"><b>Mesa ${o.table} · ${o.id}</b><span>${o.status}</span></div>${o.items.map(x=>`<div class="row">${x.qty} × ${x.name}</div>`).join("")}<div class="actions"><button class="btn secondary" onclick="kstatus('${o.id}','Preparando')">Preparando</button><button class="btn" onclick="kstatus('${o.id}','Listo')">Listo</button><button class="btn secondary" onclick="kstatus('${o.id}','Servido')">Servido</button></div></div>`).join(""):"<p class='muted'>No hay órdenes.</p>"}
+function kstatus(id,st){let o=s.orders.find(x=>x.id===id);if(!o)return;o.status=st;let t=s.tables.find(x=>x.id===o.table);if(t.order)t.order.status=st;audit(`${id}: ${st}`);save()}
+function openCash(){let n=Number(document.getElementById("opening").value);if(n<0||isNaN(n))return toast("Monto inválido");s.cash={opened:true,opening:n};audit(`Caja abierta con ${money(n)} — Marco`);save()}
+function withdraw(){let n=Number(document.getElementById("withdraw").value);if(!n||n<=0)return toast("Monto inválido");s.withdrawals.push({amount:n,time:new Date().toISOString(),employee:"Marco"});audit(`RETIRO DE CAJA ${money(n)} — Marco`);document.getElementById("withdraw").value="";save()}
+function pay(){let o=s.orders.find(x=>x.id===document.getElementById("payOrder").value),m=document.getElementById("payMethod").value;if(!o)return;if(o.status==="Pagada")return toast("Ya está pagada");s.payments.push({order:o.id,amount:total(o),method:m,time:new Date().toISOString(),employee:"Marco"});o.status="Pagada";let t=s.tables.find(x=>x.id===o.table);if(t)t.order=null;audit(`COBRO ${o.id} ${money(total(o))} — ${m} — Marco`);save();toast("Pago registrado")}
+function renderCash(){let paid=s.payments.reduce((a,x)=>a+x.amount,0),cash=s.payments.filter(x=>x.method==="Efectivo").reduce((a,x)=>a+x.amount,0),ret=s.withdrawals.reduce((a,x)=>a+x.amount,0);let pending=s.orders.filter(o=>o.status!=="Pagada");document.getElementById("cash").innerHTML=`<p>Estado: <b>${s.cash.opened?"ABIERTA":"CERRADA"}</b></p><p>Efectivo inicial: <b>${money(s.cash.opening)}</b></p><p>Ventas cobradas: <b>${money(paid)}</b></p><p>Efectivo cobrado: <b>${money(cash)}</b></p><p>Retiros: <b>${money(ret)}</b></p><p>Efectivo esperado: <b>${money(s.cash.opening+cash-ret)}</b></p><h3>Cobrar una orden</h3><select id="payOrder">${pending.map(o=>`<option value="${o.id}">${o.id} · Mesa ${o.table} · ${money(total(o))}</option>`).join("")}</select><select id="payMethod" style="margin-top:8px"><option>Efectivo</option><option>Tarjeta</option><option>Yape/Plin</option></select><button class="btn" style="margin-top:8px" onclick="pay()">Registrar cobro</button>`}
+function renderReports(){let sales=s.payments.reduce((a,x)=>a+x.amount,0);document.getElementById("stats").innerHTML=[["Ventas",money(sales)],["Órdenes",s.orders.length],["Pagos",s.payments.length],["Anulaciones",s.audit.filter(x=>x.includes("ANULACIÓN")).length]].map(x=>`<div class="card"><div class="muted">${x[0]}</div><div class="big">${x[1]}</div></div>`).join("");document.getElementById("audit").innerHTML=s.audit.slice(0,30).map(x=>`<div class="row">${x}</div>`).join("")||"<p class='muted'>Sin actividad.</p>"}
+function addStock(){let n=document.getElementById("prodName").value.trim(),q=Number(document.getElementById("prodQty").value),u=document.getElementById("prodUnit").value.trim();if(!n||q<0)return toast("Completa los datos");s.stock.push({id:Date.now(),name:n,qty:q,unit:u});audit(`Inventario agregado: ${n} ${q} ${u}`);document.getElementById("prodName").value="";document.getElementById("prodQty").value="";document.getElementById("prodUnit").value="";save()}
+function renderStock(){document.getElementById("stock").innerHTML=s.stock.map((x,i)=>`<div class="row"><span>${x.name}</span><b>${x.qty} ${x.unit||""}</b></div>`).join("")||"<p class='muted'>No hay productos.</p>"}
+function render(){renderTables();renderEditor();renderKitchen();renderCash();renderReports();renderStock()}
+setInterval(()=>document.getElementById("clock").textContent=new Date().toLocaleTimeString("es-PE"),1000);render();
+</script>
+</body></html>
