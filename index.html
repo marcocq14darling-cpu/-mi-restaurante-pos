@@ -767,8 +767,10 @@ if("serviceWorker" in navigator){
 
 (function(){
 
-  const LOGIN_USER = "Marco";
-  const LOGIN_PASSWORD = "1234"; // Cambia esta contraseña después
+  const LOGIN_USERS = {
+  "Marco": "1234",
+  "Olimpia": "QUINTO2026"
+};
 
   const loginHTML = `
     <div id="loginScreen" style="
@@ -894,8 +896,7 @@ if("serviceWorker" in navigator){
     const user = userInput.value.trim();
     const password = passwordInput.value;
 
-    if(user === LOGIN_USER && password === LOGIN_PASSWORD){
-
+    if(LOGIN_USERS[user] && password === LOGIN_USERS[user]){
       sessionStorage.setItem("posLoggedIn","true");
 
       loginScreen.remove();
