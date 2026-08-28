@@ -894,22 +894,29 @@ const LOGIN_USERS = {
 
   function login(){
 
-    const user = userInput.value.trim();
-    const password = passwordInput.value;
+  const user = userInput.value.trim();
+  const password = passwordInput.value;
 
-    if(LOGIN_USERS[user] && password === LOGIN_USERS[user]){
-      sessionStorage.setItem("posLoggedIn","true");
+  const validUser =
+    Object.prototype.hasOwnProperty.call(LOGIN_USERS, user) &&
+    LOGIN_USERS[user] === password;
 
-      loginScreen.remove();
+  if(validUser){
 
-    }else{
+    sessionStorage.setItem("posLoggedIn", "true");
+    sessionStorage.setItem("posUser", user);
 
-      loginError.style.display = "block";
-      passwordInput.value = "";
-      passwordInput.focus();
+    loginScreen.remove();
 
-    }
+  }else{
+
+    loginError.style.display = "block";
+    passwordInput.value = "";
+    passwordInput.focus();
+
   }
+}
+ 
 
   loginButton.addEventListener("click", login);
 
