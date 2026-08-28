@@ -895,7 +895,7 @@ const LOGIN_USERS = {
   function login(){
 
   const user = userInput.value.trim();
-  const password = passwordInput.value;
+ const password = passwordInput.value.trim();
 
   const validUser =
     Object.prototype.hasOwnProperty.call(LOGIN_USERS, user) &&
