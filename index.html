@@ -761,7 +761,175 @@ setInterval(()=>{
 if("serviceWorker" in navigator){
  navigator.serviceWorker.register("./sw.js").catch(()=>{});
 }
+// =============================
+// 🔐 SISTEMA DE INICIO DE SESIÓN
+// =============================
 
+(function(){
+
+  const LOGIN_USER = "Marco";
+  const LOGIN_PASSWORD = "1234"; // Cambia esta contraseña después
+
+  const loginHTML = `
+    <div id="loginScreen" style="
+      position:fixed;
+      inset:0;
+      z-index:99999;
+      background:#111827;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:25px;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    ">
+
+      <div style="
+        width:100%;
+        max-width:420px;
+        background:white;
+        border-radius:25px;
+        padding:35px 25px;
+        box-shadow:0 20px 50px rgba(0,0,0,.35);
+        text-align:center;
+      ">
+
+        <div style="
+          width:80px;
+          height:80px;
+          margin:0 auto 20px;
+          border-radius:20px;
+          background:#111827;
+          color:white;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          font-size:40px;
+        ">🍽️</div>
+
+        <h1 style="
+          margin:0 0 8px;
+          color:#111827;
+          font-size:28px;
+        ">
+          Mi Restaurante POS
+        </h1>
+
+        <p style="
+          color:#6b7280;
+          margin-bottom:30px;
+        ">
+          Inicia sesión para continuar
+        </p>
+
+        <input
+          id="loginUser"
+          type="text"
+          placeholder="Usuario"
+          autocomplete="username"
+          style="
+            width:100%;
+            padding:16px;
+            margin-bottom:15px;
+            border:1px solid #d1d5db;
+            border-radius:14px;
+            font-size:17px;
+            box-sizing:border-box;
+          "
+        >
+
+        <input
+          id="loginPassword"
+          type="password"
+          placeholder="Contraseña"
+          autocomplete="current-password"
+          style="
+            width:100%;
+            padding:16px;
+            margin-bottom:15px;
+            border:1px solid #d1d5db;
+            border-radius:14px;
+            font-size:17px;
+            box-sizing:border-box;
+          "
+        >
+
+        <button
+          id="loginButton"
+          style="
+            width:100%;
+            padding:17px;
+            border:0;
+            border-radius:14px;
+            background:#111827;
+            color:white;
+            font-size:18px;
+            font-weight:600;
+          "
+        >
+          Ingresar
+        </button>
+
+        <p id="loginError" style="
+          color:#dc2626;
+          margin-top:15px;
+          display:none;
+        ">
+          Usuario o contraseña incorrectos
+        </p>
+
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML("beforeend", loginHTML);
+
+  const loginScreen = document.getElementById("loginScreen");
+  const userInput = document.getElementById("loginUser");
+  const passwordInput = document.getElementById("loginPassword");
+  const loginButton = document.getElementById("loginButton");
+  const loginError = document.getElementById("loginError");
+
+  function login(){
+
+    const user = userInput.value.trim();
+    const password = passwordInput.value;
+
+    if(user === LOGIN_USER && password === LOGIN_PASSWORD){
+
+      sessionStorage.setItem("posLoggedIn","true");
+
+      loginScreen.remove();
+
+    }else{
+
+      loginError.style.display = "block";
+      passwordInput.value = "";
+      passwordInput.focus();
+
+    }
+  }
+
+  loginButton.addEventListener("click", login);
+
+  passwordInput.addEventListener("keydown", function(e){
+    if(e.key === "Enter"){
+      login();
+    }
+  });
+
+  userInput.addEventListener("keydown", function(e){
+    if(e.key === "Enter"){
+      passwordInput.focus();
+    }
+  });
+
+  // Si ya inició sesión durante esta sesión,
+  // no mostrar nuevamente el login.
+  if(sessionStorage.getItem("posLoggedIn") === "true"){
+    loginScreen.remove();
+  }
+
+})();
 </script>
 
 </body>
